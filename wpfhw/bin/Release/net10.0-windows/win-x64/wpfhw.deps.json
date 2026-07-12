@@ -1,0 +1,42 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0/win-x64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {},
+    ".NETCoreApp,Version=v10.0/win-x64": {
+      "wpfhw/1.0.0": {
+        "dependencies": {
+          "Costura.Fody": "6.2.0"
+        },
+        "runtime": {
+          "wpfhw.dll": {}
+        }
+      },
+      "Costura.Fody/6.2.0": {
+        "runtime": {
+          "lib/netstandard2.0/Costura.dll": {
+            "assemblyVersion": "6.2.0.0",
+            "fileVersion": "6.2.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "wpfhw/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Costura.Fody/6.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-jaX+A6sw6pI7lkLDTvxN7zU8Ja/a50N2xPKF6RYy0J6QF62wVg+hJMXJph2K8XarDaAlxQ82EaKv3fAvUNyRpg==",
+      "path": "costura.fody/6.2.0",
+      "hashPath": "costura.fody.6.2.0.nupkg.sha512"
+    }
+  }
+}

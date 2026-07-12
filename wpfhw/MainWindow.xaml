@@ -1,0 +1,241 @@
+﻿<Window x:Class="wpfhw.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Modrinth MC模组下载器 .NET10" Height="600" Width="960"
+        Background="#1a1a1a">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="140"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ========== 左侧导航栏 ========== -->
+        <Border Grid.Column="0" Background="#111111" BorderBrush="#333333" BorderThickness="0 0 1 0">
+            <StackPanel>
+                <TextBlock Text="类型" Foreground="#aaaaaa" 
+                           Margin="12 12 12 8" FontSize="12" FontWeight="Bold"/>
+                <ListBox x:Name="lstNav" BorderThickness="0" Background="Transparent"
+                         SelectionChanged="LstNav_SelectionChanged"
+                         Foreground="#ffffff">
+                    <ListBox.Resources>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Foreground" Value="#ffffff"/>
+                            <Setter Property="Padding" Value="12 8"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#7c4dff"/>
+                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#333333"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.Resources>
+                    <ListBoxItem Content="模组" Tag="mod"/>
+                    <ListBoxItem Content="资源包" Tag="resourcepack"/>
+                    <ListBoxItem Content="光影" Tag="shader"/>
+                    <ListBoxItem Content="数据包" Tag="datapack"/>
+                    <ListBoxItem Content="整合包" Tag="modpack"/>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <!-- ========== 右侧主内容 ========== -->
+        <Grid Grid.Column="1" Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 搜索面板 -->
+            <Grid x:Name="panelSearch" Grid.Row="0" Grid.RowSpan="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 顶部搜索栏 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 0 0 10">
+                    <TextBox x:Name="txtSearchKey" Width="220" VerticalContentAlignment="Center"
+                             Margin="0 0 10 0" Background="#2a2a2a" Foreground="#ffffff" 
+                             BorderBrush="#555555" CaretBrush="#ffffff"/>
+
+                    <ComboBox x:Name="cbbGameVersion" Width="120" Margin="0 0 10 0"
+                              IsEditable="True" Background="#2a2a2a" Foreground="#ffffff"
+                              BorderBrush="#555555">
+                        <ComboBox.Resources>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="Background" Value="#2a2a2a"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Style>
+                        </ComboBox.Resources>
+                        <ComboBoxItem Content=""/>
+                        <ComboBoxItem Content="1.20.1"/>
+                        <ComboBoxItem Content="1.20.4"/>
+                        <ComboBoxItem Content="1.21"/>
+                        <ComboBoxItem Content="1.21.1"/>
+                        <ComboBoxItem Content="26.1"/>
+                        <ComboBoxItem Content="26.2"/>
+                    </ComboBox>
+
+                    <ComboBox x:Name="cbbLoader" Width="100" Margin="0 0 10 0"
+                              Background="#2a2a2a" Foreground="#ffffff" BorderBrush="#555555">
+                        <ComboBox.Resources>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="Background" Value="#2a2a2a"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                            </Style>
+                        </ComboBox.Resources>
+                        <ComboBoxItem Content=""/>
+                        <ComboBoxItem Content="fabric"/>
+                        <ComboBoxItem Content="forge"/>
+                        <ComboBoxItem Content="neoforge"/>
+                        <ComboBoxItem Content="quilt"/>
+                    </ComboBox>
+
+                    <Button x:Name="btnSearch" Content="搜索" Width="80" Height="28"
+                            Click="BtnSearch_Click" Background="#7c4dff" Foreground="#ffffff"
+                            BorderThickness="0"/>
+                </StackPanel>
+
+                <!-- 搜索结果列表 -->
+                <ListBox x:Name="lstModResult" Grid.Row="1" 
+                         MouseDoubleClick="LstModResult_MouseDoubleClick"
+                         Background="#222222" BorderBrush="#444444">
+                    <ListBox.Resources>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#ffffff"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#333333"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#2a2a2a"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.Resources>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="6">
+                                <Image Width="52" Height="52" Margin="0 0 12 0" Source="{Binding IconUrl}">
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IconUrl}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                                <Border Width="52" Height="52" Background="#555555" Margin="0 0 12 0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IconUrl}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Medium"
+                                               Foreground="#ffffff"/>
+                                    <TextBlock Text="{Binding Description}" Foreground="#bbbbbb"
+                                               TextWrapping="Wrap" MaxWidth="660"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- 底部状态栏 -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0 12 0 0">
+                    <TextBlock x:Name="txtStatusMsg" VerticalAlignment="Center" Foreground="#aaaaaa"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- 版本详情面板（默认隐藏） -->
+            <Grid x:Name="panelVersionDetail" Grid.Row="0" Grid.RowSpan="3" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0" Content="← 返回" Width="80" Height="28"
+                        HorizontalAlignment="Left" Margin="0 0 0 10"
+                        Click="BtnBack_Click" Background="#444444" Foreground="#ffffff"
+                        BorderThickness="0"/>
+
+                <Border Grid.Row="1" Background="#222222" CornerRadius="8" Padding="16" 
+                        Margin="0 0 0 10" BorderBrush="#444444" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Image Grid.Column="0" Width="64" Height="64" Margin="0 0 16 0"
+                               Source="{Binding SelectedMod.IconUrl}"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding SelectedMod.Title}" FontSize="18" 
+                                       FontWeight="Bold" Foreground="#ffffff"/>
+                            <TextBlock Text="{Binding SelectedMod.Description}" 
+                                       Foreground="#cccccc" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
+                                <Button Content="转到 Modrinth" Width="110" Margin="0 0 10 0"
+                                        Click="BtnOpenModrinth_Click" Background="#444444" 
+                                        Foreground="#ffffff" BorderThickness="0"/>
+                                <Button Content="复制名称" Width="90" Click="BtnCopyName_Click"
+                                        Background="#444444" Foreground="#ffffff" BorderThickness="0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <StackPanel x:Name="panelVersionTags" Orientation="Horizontal" Margin="0 0 0 10"/>
+                        <ItemsControl x:Name="itemsVersionGroups">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Expander Header="{Binding GroupName}" IsExpanded="{Binding IsRecommended}"
+                                              Margin="0 4 0 0" Background="#1a1a1a" 
+                                              BorderBrush="#444444" BorderThickness="1"
+                                              Foreground="#ffffff">
+                                        <StackPanel Margin="12 8">
+                                            <TextBlock Text="{Binding VersionInfo}" Foreground="#aaaaaa" FontSize="12"/>
+                                            <Button Content="下载" Width="80" Height="28"
+                                                    Margin="0 8 0 0" HorizontalAlignment="Left"
+                                                    Tag="{Binding}" Click="BtnDownloadVersion_Click"
+                                                    Background="#7c4dff" Foreground="#ffffff"
+                                                    BorderThickness="0"/>
+                                        </StackPanel>
+                                    </Expander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0 10 0 0">
+                    <ProgressBar x:Name="progressBarDownload" Width="450" Height="22" 
+                                 Margin="0 0 12 0" Background="#333333" 
+                                 Foreground="#7c4dff"/>
+                    <TextBlock x:Name="txtDownloadStatus" VerticalAlignment="Center" 
+                               Foreground="#aaaaaa"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
