@@ -1,19 +1,17 @@
-# 编译产物
-bin/
-obj/
+# 子文件夹内编译目录
+wpfhw/bin/
+wpfhw/obj/
 
-# Visual Studio 用户本地配置
-*.user
+# VS本地配置
+*.csproj.user
 *.suo
 .vs/
 
-# NuGet 缓存
-packages/
-
-# 日志、临时文件
-*.log
-*.tmp
+# 压缩包
+*.zip
+*.rar
+*.7z
 
 # 系统文件
-.DS_Store
 Thumbs.db
+.DS_Store
