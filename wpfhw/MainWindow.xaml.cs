@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Data;
+using System.Windows.Media.Animation;
 
 namespace wpfhw;
 
@@ -16,6 +18,14 @@ public partial class MainWindow : Window
     private string _currentGameVer = "";
     private string _currentLoader = "";
     private string _currentProjectType = "mod";
+    private string _downloadPath = "";
+    private ModFile? _pendingDownloadFile;
+    private VersionDisplayItem? _pendingVersion;
+    private CancellationTokenSource? _downloadCts;
+    private int _currentOffset = 0;
+    private const int PageSize = 30;
+    private string _lastKeyword = "";
+    private int _totalHits = 0;
 
     public MainWindow()
     {
@@ -26,51 +36,100 @@ public partial class MainWindow : Window
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
             "ModDownloader/1.0 (haodi0302@qq.com; Windows)");
 
-        // 手动设置初始类型，避免 SelectionChanged 在初始化时触发
         _currentProjectType = "mod";
+        _downloadPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+        UpdateNavStyle(navMod);
+
+        this.Closed += (s, e) =>
+        {
+            _downloadCts?.Cancel();
+            _downloadCts?.Dispose();
+            _httpClient.Dispose();
+        };
     }
 
-    #region ========== 导航切换 ==========
+    #region ========== 窗口控制 ==========
 
-    private void LstNav_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (lstNav.SelectedItem is not ListBoxItem item) return;
-        _currentProjectType = item.Tag?.ToString() ?? "mod";
+        if (e.ChangedButton == MouseButton.Left)
+            DragMove();
+    }
 
-        // 加 null 检查，防止初始化时控件还没准备好
-        if (cbbLoader != null)
-            cbbLoader.IsEnabled = _currentProjectType != "modpack";
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
 
-        if (txtStatusMsg != null)
-            txtStatusMsg.Text = $"已切换至：{item.Content}，点击搜索";
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
 
-        if (lstModResult != null)
-            lstModResult.Items.Clear();
+    #endregion
+
+    #region ========== 导航栏 ==========
+
+    private void Nav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn) return;
+
+        _currentProjectType = btn.Tag?.ToString() ?? "mod";
+        UpdateNavStyle(btn);
+
+        // 清空搜索框并重置下拉框
+        txtSearchKey.Text = "";
+        cbbGameVersion.SelectedIndex = 0;
+        cbbLoader.SelectedIndex = 0;
+
+        txtStatusMsg.Text = "已切换，点击搜索";
+        lstModResult.Items.Clear();
+        _currentOffset = 0;
+        _totalHits = 0;
+    }
+
+    private void UpdateNavStyle(Button active)
+    {
+        foreach (var child in navPanel.Children)
+        {
+            if (child is Button btn)
+            {
+                btn.Foreground = new SolidColorBrush(Color.FromRgb(102, 102, 102));
+                btn.FontWeight = FontWeights.Normal;
+                btn.Background = Brushes.Transparent;
+            }
+        }
+
+        active.Foreground = new SolidColorBrush(Color.FromRgb(0, 122, 255));
+        active.FontWeight = FontWeights.SemiBold;
+        active.Background = new SolidColorBrush(Color.FromRgb(255, 255, 255));
     }
 
     #endregion
 
     #region ========== 搜索面板 ==========
 
-    private async void BtnSearch_Click(object sender, RoutedEventArgs e)
+    private void BtnSearch_Click(object sender, RoutedEventArgs e)
     {
-        string keyword = txtSearchKey.Text.Trim();
-        string gameVer = (cbbGameVersion.SelectedItem as ComboBoxItem)?.Content.ToString()
-            ?? cbbGameVersion.Text.Trim();
-        string loader = (cbbLoader.SelectedItem as ComboBoxItem)?.Content.ToString()
-            ?? cbbLoader.Text.Trim();
+        _currentOffset = 0;
+        _lastKeyword = txtSearchKey.Text.Trim();
+        DoSearch();
+    }
+
+    private async void DoSearch()
+    {
+        string keyword = _lastKeyword;
+        string gameVer = GetComboBoxValue(cbbGameVersion, "全部版本");
+        string loader = GetComboBoxValue(cbbLoader, "全部");
 
         _currentGameVer = gameVer;
         _currentLoader = loader;
 
-        if (string.IsNullOrWhiteSpace(keyword))
-        {
-            txtStatusMsg.Text = "请输入搜索关键词";
-            return;
-        }
-
         try
         {
+            // 修复：搜索时显示绿点
+            statusDot.Visibility = Visibility.Visible;
             txtStatusMsg.Text = "正在搜索...";
             lstModResult.Items.Clear();
 
@@ -93,7 +152,8 @@ public partial class MainWindow : Window
             string facetEnc = Uri.EscapeDataString(rawFacet);
             string queryEnc = Uri.EscapeDataString(keyword);
 
-            string requestUrl = $"https://api.modrinth.com/v2/search?query={queryEnc}&facets={facetEnc}&limit=20";
+            string sortParam = string.IsNullOrWhiteSpace(keyword) ? "&index=downloads" : "";
+            string requestUrl = $"https://api.modrinth.com/v2/search?query={queryEnc}&facets={facetEnc}&limit={PageSize}&offset={_currentOffset}{sortParam}";
 
             string jsonText = await _httpClient.GetStringAsync(requestUrl);
 
@@ -103,13 +163,15 @@ public partial class MainWindow : Window
             };
             var searchResult = JsonSerializer.Deserialize<ModSearchResponse>(jsonText, jsonOption);
 
+            _totalHits = searchResult?.TotalHits ?? 0;
+
             if (searchResult?.Hits != null && searchResult.Hits.Any())
             {
                 foreach (var mod in searchResult.Hits)
                 {
                     lstModResult.Items.Add(mod);
                 }
-                txtStatusMsg.Text = $"成功找到 {searchResult.Hits.Count} 个结果（双击进入版本选择）";
+                txtStatusMsg.Text = $"找到 {_totalHits} 个结果，第 {_currentOffset / PageSize + 1} 页";
             }
             else
             {
@@ -128,13 +190,53 @@ public partial class MainWindow : Window
         {
             txtStatusMsg.Text = $"搜索异常：{ex.Message}";
         }
+        finally
+        {
+            // 修复：搜索结束后隐藏绿点
+            statusDot.Visibility = Visibility.Collapsed;
+        }
     }
 
-    private void LstModResult_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private static string GetComboBoxValue(ComboBox cbb, string defaultValue)
+    {
+        if (cbb.SelectedItem is ComboBoxItem item && item.Content != null)
+        {
+            string content = item.Content.ToString()?.Trim() ?? "";
+            return content == defaultValue ? "" : content;
+        }
+
+        if (cbb.IsEditable && !string.IsNullOrWhiteSpace(cbb.Text))
+        {
+            string text = cbb.Text.Trim();
+            return text == defaultValue ? "" : text;
+        }
+
+        return "";
+    }
+
+    private void LstModResult_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (lstModResult.SelectedItem is not ModSearchHit modHit) return;
         _selectedMod = modHit;
         ShowVersionDetail(modHit);
+    }
+
+    private void BtnPrevPage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentOffset >= PageSize)
+        {
+            _currentOffset -= PageSize;
+            DoSearch();
+        }
+    }
+
+    private void BtnNextPage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentOffset + PageSize < _totalHits)
+        {
+            _currentOffset += PageSize;
+            DoSearch();
+        }
     }
 
     #endregion
@@ -145,7 +247,8 @@ public partial class MainWindow : Window
     {
         panelSearch.Visibility = Visibility.Collapsed;
         panelVersionDetail.Visibility = Visibility.Visible;
-        txtDownloadStatus.Text = "正在加载版本列表...";
+        panelDownloadConfirm.Visibility = Visibility.Collapsed;
+        panelDownloading.Visibility = Visibility.Collapsed;
 
         panelVersionDetail.DataContext = new { SelectedMod = modHit };
 
@@ -162,7 +265,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            txtDownloadStatus.Text = $"加载失败：{ex.Message}";
+            txtStatusMsg.Text = $"加载失败：{ex.Message}";
         }
     }
 
@@ -192,18 +295,25 @@ public partial class MainWindow : Window
 
     private Button CreateTagButton(string text, bool isActive)
     {
-        return new Button
+        var btn = new Button
         {
             Content = text,
-            Width = 60,
-            Height = 28,
+            Width = 70,
+            Height = 32,
             Margin = new Thickness(0, 0, 8, 0),
-            Background = isActive
-                ? new SolidColorBrush(Color.FromRgb(156, 39, 176))
-                : new SolidColorBrush(Color.FromRgb(68, 68, 68)),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(0)
+            BorderThickness = new Thickness(0),
+            FontSize = 12,
+            Style = (Style)FindResource("VersionTag")
         };
+
+        if (isActive)
+        {
+            btn.Background = new SolidColorBrush(Color.FromRgb(0, 122, 255));
+            btn.Foreground = Brushes.White;
+            btn.FontWeight = FontWeights.SemiBold;
+        }
+
+        return btn;
     }
 
     private void FilterVersionsByTag(string gameVerTag)
@@ -212,21 +322,11 @@ public partial class MainWindow : Window
             ? _currentVersions
             : _currentVersions.Where(v => v.GameVersions.Contains(gameVerTag)).ToList();
 
-        var groups = filtered
-            .GroupBy(v => string.Join("/", v.Loaders))
-            .Select(g => new VersionGroup
-            {
-                GroupName = $"{g.Key} {gameVerTag}".Trim(),
-                Versions = g.ToList(),
-                VersionInfo = $"版本号: {string.Join(", ", g.Select(v => v.VersionNumber).Take(3))}...",
-                IsRecommended = g.Any(v =>
-                    (!string.IsNullOrWhiteSpace(_currentGameVer) && v.GameVersions.Contains(_currentGameVer)) &&
-                    (!string.IsNullOrWhiteSpace(_currentLoader) && v.Loaders.Contains(_currentLoader, StringComparer.OrdinalIgnoreCase)))
-            })
+        var displayItems = filtered
+            .Select(v => new VersionDisplayItem(v))
             .ToList();
 
-        itemsVersionGroups.ItemsSource = groups;
-        txtDownloadStatus.Text = $"共 {filtered.Count} 个版本";
+        itemsVersionGroups.ItemsSource = displayItems;
     }
 
     private void BtnBack_Click(object sender, RoutedEventArgs e)
@@ -235,6 +335,7 @@ public partial class MainWindow : Window
         panelSearch.Visibility = Visibility.Visible;
         _currentVersions.Clear();
         itemsVersionGroups.ItemsSource = null;
+        lstModResult.SelectedIndex = -1;
     }
 
     private void BtnOpenModrinth_Click(object sender, RoutedEventArgs e)
@@ -250,75 +351,162 @@ public partial class MainWindow : Window
     private void BtnCopyName_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedMod == null) return;
-        Clipboard.SetText(_selectedMod.Title);
-        txtDownloadStatus.Text = "已复制名称到剪贴板";
+        System.Windows.Clipboard.SetText(_selectedMod.Title);
+        txtStatusMsg.Text = "已复制名称";
     }
 
-    private async void BtnDownloadVersion_Click(object sender, RoutedEventArgs e)
+    #endregion
+
+    #region ========== 下载确认面板 ==========
+
+    private void BtnDownloadVersion_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is not VersionGroup group) return;
+        if ((sender as Button)?.Tag is not VersionDisplayItem item) return;
 
-        var version = group.Versions.FirstOrDefault(v =>
-            (!string.IsNullOrWhiteSpace(_currentGameVer) && v.GameVersions.Contains(_currentGameVer)) &&
-            (!string.IsNullOrWhiteSpace(_currentLoader) && v.Loaders.Contains(_currentLoader, StringComparer.OrdinalIgnoreCase)))
-            ?? group.Versions.First();
-
-        var mainFile = version.Files.FirstOrDefault(f => f.IsPrimary)
-            ?? version.Files.FirstOrDefault();
+        _pendingVersion = item;
+        var mainFile = item.Version.Files.FirstOrDefault(f => f.IsPrimary)
+            ?? item.Version.Files.FirstOrDefault();
 
         if (mainFile == null)
         {
-            txtDownloadStatus.Text = "该版本无可下载文件";
+            txtStatusMsg.Text = "该版本无可下载文件";
             return;
         }
 
-        string saveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        string fullSavePath = Path.Combine(saveDirectory, mainFile.FileName);
+        _pendingDownloadFile = mainFile;
+        txtDownloadPath.Text = _downloadPath;
+        txtDownloadFileName.Text = mainFile.FileName;
+        txtDownloadVersionInfo.Text = $"版本: {item.Version.VersionNumber} | MC版本: {string.Join(", ", item.Version.GameVersions.Take(3))}";
 
-        txtDownloadStatus.Text = $"正在下载 {mainFile.FileName}...";
-        progressBarDownload.Value = 0;
+        panelVersionDetail.Visibility = Visibility.Collapsed;
+        panelDownloadConfirm.Visibility = Visibility.Visible;
+    }
+
+    private void BtnBackFromDownload_Click(object sender, RoutedEventArgs e)
+    {
+        panelDownloadConfirm.Visibility = Visibility.Collapsed;
+        panelVersionDetail.Visibility = Visibility.Visible;
+        _pendingDownloadFile = null;
+        _pendingVersion = null;
+    }
+
+    private void BtnBrowseDownloadPath_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "选择下载保存位置",
+            FolderName = _downloadPath
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _downloadPath = dialog.FolderName;
+            txtDownloadPath.Text = _downloadPath;
+        }
+    }
+
+    private async void BtnStartDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pendingDownloadFile == null) return;
+
+        _downloadCts?.Cancel();
+        _downloadCts?.Dispose();
+        _downloadCts = new CancellationTokenSource();
+        var ct = _downloadCts.Token;
+
+        panelDownloadConfirm.Visibility = Visibility.Collapsed;
+        panelDownloading.Visibility = Visibility.Visible;
+
+        string fullSavePath = Path.Combine(_downloadPath, _pendingDownloadFile.FileName);
+        txtDownloadingFile.Text = _pendingDownloadFile.FileName;
+
+        progressBarFill.Width = 0;
+        txtDownloadPercent.Text = "0%";
 
         try
         {
             using var response = await _httpClient.GetAsync(
-                mainFile.Url, HttpCompletionOption.ResponseHeadersRead);
+                _pendingDownloadFile.Url, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
             long totalBytes = response.Content.Headers.ContentLength ?? -1;
             long receivedBytes = 0;
             byte[] buffer = new byte[8192];
 
-            using var streamRemote = await response.Content.ReadAsStreamAsync();
+            using var streamRemote = await response.Content.ReadAsStreamAsync(ct);
             using var streamLocal = new FileStream(
                 fullSavePath, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, true);
 
             int readCount;
-            while ((readCount = await streamRemote.ReadAsync(buffer)) > 0)
+            while ((readCount = await streamRemote.ReadAsync(buffer, ct)) > 0)
             {
-                await streamLocal.WriteAsync(buffer.AsMemory(0, readCount));
+                await streamLocal.WriteAsync(buffer.AsMemory(0, readCount), ct);
                 receivedBytes += readCount;
 
                 if (totalBytes > 0)
                 {
-                    progressBarDownload.Value = receivedBytes * 100.0 / totalBytes;
+                    double percent = receivedBytes * 100.0 / totalBytes;
+                    UpdateProgressBar(percent);
+                    txtDownloadPercent.Text = $"{percent:F1}%";
                 }
             }
 
-            txtDownloadStatus.Text = $"✅ 下载完成！{mainFile.FileName}";
+            txtDownloadingFile.Text = $"下载完成！{_pendingDownloadFile.FileName}";
+            txtDownloadPercent.Text = "100%";
+            UpdateProgressBar(100);
+
+            await Task.Delay(3000, ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                panelDownloading.Visibility = Visibility.Collapsed;
+                panelVersionDetail.Visibility = Visibility.Visible;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            txtDownloadingFile.Text = "下载已取消";
+            txtDownloadPercent.Text = "";
+
+            if (File.Exists(fullSavePath))
+            {
+                try { File.Delete(fullSavePath); } catch { }
+            }
         }
         catch (Exception ex)
         {
-            txtDownloadStatus.Text = $"❌ 下载失败：{ex.Message}";
+            txtDownloadingFile.Text = $"下载失败：{ex.Message}";
+            txtDownloadPercent.Text = "";
         }
+    }
+
+    private void UpdateProgressBar(double percent)
+    {
+        if (progressBarFill.Parent is not FrameworkElement parent) return;
+
+        double targetWidth = percent / 100.0 * parent.ActualWidth;
+        if (targetWidth < 0) targetWidth = 0;
+
+        progressBarFill.Width = targetWidth;
     }
 
     #endregion
 }
 
-public class VersionGroup
+public class VersionDisplayItem
 {
-    public string GroupName { get; set; } = "";
-    public List<ModVersion> Versions { get; set; } = new();
-    public string VersionInfo { get; set; } = "";
-    public bool IsRecommended { get; set; }
+    public ModVersion Version { get; }
+    public string VersionNumber => Version.VersionNumber;
+    public string LoadersDisplay => string.Join(", ", Version.Loaders);
+    public string GameVersionsDisplay => string.Join(", ", Version.GameVersions);
+    public string VersionInfo => $"支持MC: {GameVersionsDisplay} | Loaders: {LoadersDisplay}";
+    public bool IsPreview => Version.VersionNumber.Contains("beta", StringComparison.OrdinalIgnoreCase)
+        || Version.VersionNumber.Contains("alpha", StringComparison.OrdinalIgnoreCase)
+        || Version.VersionNumber.Contains("rc", StringComparison.OrdinalIgnoreCase);
+    public bool IsRelease => !IsPreview;
+
+    public VersionDisplayItem(ModVersion version)
+    {
+        Version = version;
+    }
 }

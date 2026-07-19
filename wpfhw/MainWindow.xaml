@@ -1,241 +1,779 @@
 ﻿<Window x:Class="wpfhw.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Modrinth MC模组下载器 .NET10" Height="600" Width="960"
-        Background="#1a1a1a">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="140"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        Title="Modrinth 下载器" 
+        Height="720" Width="1080"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI, Microsoft YaHei"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResize">
 
-        <!-- ========== 左侧导航栏 ========== -->
-        <Border Grid.Column="0" Background="#111111" BorderBrush="#333333" BorderThickness="0 0 1 0">
-            <StackPanel>
-                <TextBlock Text="类型" Foreground="#aaaaaa" 
-                           Margin="12 12 12 8" FontSize="12" FontWeight="Bold"/>
-                <ListBox x:Name="lstNav" BorderThickness="0" Background="Transparent"
-                         SelectionChanged="LstNav_SelectionChanged"
-                         Foreground="#ffffff">
-                    <ListBox.Resources>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Foreground" Value="#ffffff"/>
-                            <Setter Property="Padding" Value="12 8"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#7c4dff"/>
-                                    <Setter Property="Foreground" Value="#ffffff"/>
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#333333"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.Resources>
-                    <ListBoxItem Content="模组" Tag="mod"/>
-                    <ListBoxItem Content="资源包" Tag="resourcepack"/>
-                    <ListBoxItem Content="光影" Tag="shader"/>
-                    <ListBoxItem Content="数据包" Tag="datapack"/>
-                    <ListBoxItem Content="整合包" Tag="modpack"/>
-                </ListBox>
-            </StackPanel>
-        </Border>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
-        <!-- ========== 右侧主内容 ========== -->
-        <Grid Grid.Column="1" Margin="12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#007aff"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16 10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="20"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3395ff"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0056b3"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-            <!-- 搜索面板 -->
-            <Grid x:Name="panelSearch" Grid.Row="0" Grid.RowSpan="3">
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#f2f2f7"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16 10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="20"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#e5e5ea"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#d1d1d6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#ff3b30"/>
+        </Style>
+
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#ffffff"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12 0"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CaretBrush" Value="#007aff"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Grid>
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"
+                                    Padding="{TemplateBinding Padding}">
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- Placeholder -->
+                            <TextBlock x:Name="placeholder"
+                                       Text="{TemplateBinding Tag}"
+                                       Foreground="#999999"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"
+                                       VerticalAlignment="Center"
+                                       Margin="12 0 0 0"
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#f5f5f5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="#ffffff"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#ffffff"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10 0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <!-- 背景边框 -->
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"/>
+
+                            <!-- ToggleButton 铺满整个区域，负责打开下拉 -->
+                            <ToggleButton x:Name="toggle"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Stretch"/>
+
+                            <!-- 选中项显示 -->
+                            <ContentPresenter x:Name="content"
+                                              Margin="12 0 30 0"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+
+                            <!-- 可编辑文本框 -->
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Margin="12 0 30 0"
+                                     VerticalAlignment="Center"
+                                     Visibility="Collapsed"
+                                     Focusable="True"/>
+
+                            <!-- 下拉箭头 -->
+                            <Path x:Name="arrow"
+                                  Data="M 0 0 L 4 4 L 8 0"
+                                  Stroke="#999999"
+                                  StrokeThickness="1.5"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Margin="0 0 12 0"
+                                  IsHitTestVisible="False"/>
+
+                            <!-- 下拉列表 Popup -->
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide"
+                                   StaysOpen="False">
+                                <Border Background="#ffffff"
+                                        BorderBrush="#e5e5ea"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Margin="0 4 0 0">
+                                    <ScrollViewer x:Name="DropDownScrollViewer"
+                                                  Margin="4">
+                                        <ItemsPresenter x:Name="ItemsPresenter"
+                                                        KeyboardNavigation.DirectionalNavigation="Contained"
+                                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <!-- 可编辑模式 -->
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="content" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <!-- 下拉打开时箭头旋转 -->
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="arrow" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="180" CenterX="4" CenterY="2"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Padding" Value="12 8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#f2f2f7"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#e5e5ea"/>
+                                <Setter TargetName="border" Property="TextElement.FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModListItem" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0 2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="16"
+                                Padding="12"
+                                Margin="{TemplateBinding Margin}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#f2f2f7"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#e5e5ea"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="VersionTag" TargetType="Button">
+            <Setter Property="Background" Value="#f2f2f7"/>
+            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12 6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="16"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#e5e5ea"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#d1d1d6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#ffffff" CornerRadius="20" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect ShadowDepth="0" BlurRadius="30" Opacity="0.15" Color="#000000"/>
+        </Border.Effect>
+
+        <Grid>
+            <Border x:Name="titleBar" Background="Transparent" Height="60" 
+                    VerticalAlignment="Top" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 左上角小 Logo -->
+                    <Grid Grid.Column="0" Width="40" Height="40" Margin="20 0 0 0"
+                          HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Image x:Name="imgSmallLogo"
+                               Source="/logo.png"
+                               Stretch="Uniform"
+                               Width="32" Height="32">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                        <TextBlock Text="MD" FontSize="18" FontWeight="Bold" Foreground="#007aff"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source, ElementName=imgSmallLogo}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <Border Grid.Column="1" 
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#f2f2f7" CornerRadius="25" Padding="4">
+                        <Border Background="#ffffff" CornerRadius="22" Opacity="0.95">
+                            <StackPanel x:Name="navPanel" Orientation="Horizontal">
+                                <Button x:Name="navMod" Content="模组" Tag="mod" 
+                                        Click="Nav_Click" Style="{StaticResource SecondaryButton}"
+                                        Background="Transparent" Foreground="#007aff" FontWeight="SemiBold"/>
+                                <Button x:Name="navResource" Content="资源包" Tag="resourcepack" 
+                                        Click="Nav_Click" Style="{StaticResource SecondaryButton}"
+                                        Background="Transparent"/>
+                                <Button x:Name="navShader" Content="光影" Tag="shader" 
+                                        Click="Nav_Click" Style="{StaticResource SecondaryButton}"
+                                        Background="Transparent"/>
+                                <Button x:Name="navData" Content="数据包" Tag="datapack" 
+                                        Click="Nav_Click" Style="{StaticResource SecondaryButton}"
+                                        Background="Transparent"/>
+                                <Button x:Name="navPack" Content="整合包" Tag="modpack" 
+                                        Click="Nav_Click" Style="{StaticResource SecondaryButton}"
+                                        Background="Transparent"/>
+                            </StackPanel>
+                        </Border>
+                    </Border>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0 0 20 0" 
+                                VerticalAlignment="Center">
+                        <Button x:Name="btnMinimize" Content="−" Width="32" Height="32" 
+                                Click="BtnMinimize_Click" Style="{StaticResource SecondaryButton}"
+                                FontSize="16" Padding="0"/>
+                        <Button x:Name="btnClose" Content="×" Width="32" Height="32" 
+                                Click="BtnClose_Click" Style="{StaticResource DangerButton}"
+                                FontSize="16" Padding="0" Margin="8 0 0 0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Margin="20 70 20 20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- 顶部搜索栏 -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 0 0 10">
-                    <TextBox x:Name="txtSearchKey" Width="220" VerticalContentAlignment="Center"
-                             Margin="0 0 10 0" Background="#2a2a2a" Foreground="#ffffff" 
-                             BorderBrush="#555555" CaretBrush="#ffffff"/>
+                <Grid x:Name="panelSearch" Grid.Row="0" Grid.RowSpan="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <ComboBox x:Name="cbbGameVersion" Width="120" Margin="0 0 10 0"
-                              IsEditable="True" Background="#2a2a2a" Foreground="#ffffff"
-                              BorderBrush="#555555">
-                        <ComboBox.Resources>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="Background" Value="#2a2a2a"/>
-                                <Setter Property="Foreground" Value="#ffffff"/>
-                            </Style>
-                        </ComboBox.Resources>
-                        <ComboBoxItem Content=""/>
-                        <ComboBoxItem Content="1.20.1"/>
-                        <ComboBoxItem Content="1.20.4"/>
-                        <ComboBoxItem Content="1.21"/>
-                        <ComboBoxItem Content="1.21.1"/>
-                        <ComboBoxItem Content="26.1"/>
-                        <ComboBoxItem Content="26.2"/>
-                    </ComboBox>
+                    <Border Grid.Row="0" Background="#f2f2f7" CornerRadius="16" 
+                            Padding="16" Margin="0 0 0 16">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBox x:Name="txtSearchKey" Width="300" 
+                                     Style="{StaticResource ModernTextBox}"
+                                     Tag="搜索模组..."
+                                     Margin="0 0 10 0"/>
 
-                    <ComboBox x:Name="cbbLoader" Width="100" Margin="0 0 10 0"
-                              Background="#2a2a2a" Foreground="#ffffff" BorderBrush="#555555">
-                        <ComboBox.Resources>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="Background" Value="#2a2a2a"/>
-                                <Setter Property="Foreground" Value="#ffffff"/>
-                            </Style>
-                        </ComboBox.Resources>
-                        <ComboBoxItem Content=""/>
-                        <ComboBoxItem Content="fabric"/>
-                        <ComboBoxItem Content="forge"/>
-                        <ComboBoxItem Content="neoforge"/>
-                        <ComboBoxItem Content="quilt"/>
-                    </ComboBox>
+                            <ComboBox x:Name="cbbGameVersion" Width="130" 
+                                      Style="{StaticResource ModernComboBox}"
+                                      IsEditable="True" Margin="0 0 10 0">
+                                <ComboBoxItem Content="全部版本"/>
+                                <ComboBoxItem Content="1.20.1"/>
+                                <ComboBoxItem Content="1.20.4"/>
+                                <ComboBoxItem Content="1.21"/>
+                                <ComboBoxItem Content="1.21.1"/>
+                                <ComboBoxItem Content="26.1"/>
+                                <ComboBoxItem Content="26.2"/>
+                            </ComboBox>
 
-                    <Button x:Name="btnSearch" Content="搜索" Width="80" Height="28"
-                            Click="BtnSearch_Click" Background="#7c4dff" Foreground="#ffffff"
-                            BorderThickness="0"/>
-                </StackPanel>
+                            <ComboBox x:Name="cbbLoader" Width="110" 
+                                      Style="{StaticResource ModernComboBox}"
+                                      Margin="0 0 10 0">
+                                <ComboBoxItem Content="全部"/>
+                                <ComboBoxItem Content="fabric"/>
+                                <ComboBoxItem Content="forge"/>
+                                <ComboBoxItem Content="neoforge"/>
+                                <ComboBoxItem Content="quilt"/>
+                            </ComboBox>
 
-                <!-- 搜索结果列表 -->
-                <ListBox x:Name="lstModResult" Grid.Row="1" 
-                         MouseDoubleClick="LstModResult_MouseDoubleClick"
-                         Background="#222222" BorderBrush="#444444">
-                    <ListBox.Resources>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#ffffff"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#333333"/>
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#2a2a2a"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.Resources>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="6">
-                                <Image Width="52" Height="52" Margin="0 0 12 0" Source="{Binding IconUrl}">
-                                    <Image.Style>
-                                        <Style TargetType="Image">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IconUrl}" Value="">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>
-                                </Image>
-                                <Border Width="52" Height="52" Background="#555555" Margin="0 0 12 0">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
+                            <Button x:Name="btnSearch" Content="搜索" 
+                                    Style="{StaticResource PrimaryButton}"
+                                    Height="40" Click="BtnSearch_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ListBox x:Name="lstModResult" Grid.Row="2" 
+                             SelectionChanged="LstModResult_SelectionChanged"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModListItem}"/>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="72"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Width="64" Height="64" 
+                                            CornerRadius="16" Margin="0 0 16 0"
+                                            Background="#f2f2f7" 
+                                            ClipToBounds="True"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <Image Source="{Binding IconUrl}" 
+                                               Stretch="UniformToFill"
+                                               Width="64" Height="64">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IconUrl}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IconUrl}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                    </Border>
+
+                                    <Border Grid.Column="0" Width="64" Height="64" 
+                                            CornerRadius="16" Margin="0 0 16 0"
+                                            Background="#e5e5ea"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IconUrl}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IconUrl}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="?" FontSize="24" 
+                                                   HorizontalAlignment="Center" 
+                                                   VerticalAlignment="Center" 
+                                                   Foreground="#999999"/>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="16" 
+                                                   FontWeight="SemiBold" Foreground="#333333"/>
+                                        <TextBlock Text="{Binding Description}" 
+                                                   Foreground="#666666" FontSize="13"
+                                                   TextWrapping="Wrap" MaxWidth="600"
+                                                   Margin="0 4 0 0" LineHeight="20"/>
+                                        <TextBlock Text="{Binding DownloadsDisplay}" 
+                                                   Foreground="#999999" FontSize="12"
+                                                   Margin="0 4 0 0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0 12 0 0">
+                        <Ellipse x:Name="statusDot" Width="8" Height="8" Fill="#34c759" Margin="0 0 8 0"
+                                 Visibility="Collapsed"/>
+                        <TextBlock x:Name="txtStatusMsg" VerticalAlignment="Center" 
+                                   Foreground="#999999" FontSize="12"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0 8 0 0" HorizontalAlignment="Center">
+                        <Button x:Name="btnPrevPage" Content="上一页" 
+                                Style="{StaticResource SecondaryButton}"
+                                Click="BtnPrevPage_Click" Margin="0 0 10 0"/>
+                        <Button x:Name="btnNextPage" Content="下一页" 
+                                Style="{StaticResource SecondaryButton}"
+                                Click="BtnNextPage_Click"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="panelVersionDetail" Grid.Row="0" Grid.RowSpan="2" 
+                      Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Button Grid.Row="0" Content="返回" 
+                            Style="{StaticResource SecondaryButton}"
+                            HorizontalAlignment="Left" Margin="0 0 0 16"
+                            Click="BtnBack_Click"/>
+
+                    <Border Grid.Row="1" Background="#f2f2f7" CornerRadius="20" 
+                            Padding="24" Margin="0 0 0 16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0" Width="72" Height="72">
+                                <Border Width="72" Height="72" 
+                                        CornerRadius="18" ClipToBounds="True"
+                                        Background="#e5e5ea">
+                                    <Image Source="{Binding SelectedMod.IconUrl}" 
+                                           Stretch="UniformToFill">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedMod.IconUrl}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SelectedMod.IconUrl}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                </Border>
+                                <TextBlock Text="?" FontSize="28" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center" 
+                                           Foreground="#999999">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IconUrl}" Value="">
+                                                <DataTrigger Binding="{Binding SelectedMod.IconUrl}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding SelectedMod.IconUrl}" Value="{x:Null}">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Border.Style>
-                                </Border>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Medium"
-                                               Foreground="#ffffff"/>
-                                    <TextBlock Text="{Binding Description}" Foreground="#bbbbbb"
-                                               TextWrapping="Wrap" MaxWidth="660"/>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" Margin="16 0 0 0">
+                                <TextBlock Text="{Binding SelectedMod.Title}" FontSize="22" 
+                                           FontWeight="Bold" Foreground="#333333"/>
+                                <TextBlock Text="{Binding SelectedMod.Description}" 
+                                           Foreground="#666666" TextWrapping="Wrap" 
+                                           Margin="0 6 0 0" FontSize="13" LineHeight="22"/>
+                                <StackPanel Orientation="Horizontal" Margin="0 12 0 0">
+                                    <Button Content="访问 Modrinth" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="0 0 8 0" Click="BtnOpenModrinth_Click"/>
+                                    <Button Content="复制名称" 
+                                            Style="{StaticResource SecondaryButton}"
+                                            Click="BtnCopyName_Click"/>
                                 </StackPanel>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                        </Grid>
+                    </Border>
 
-                <!-- 底部状态栏 -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0 12 0 0">
-                    <TextBlock x:Name="txtStatusMsg" VerticalAlignment="Center" Foreground="#aaaaaa"/>
-                </StackPanel>
-            </Grid>
+                    <StackPanel Grid.Row="2" Margin="0 0 0 12">
+                        <TextBlock Text="选择游戏版本" FontSize="12" FontWeight="SemiBold" 
+                                   Foreground="#999999" Margin="0 0 0 8"/>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                                      VerticalScrollBarVisibility="Disabled"
+                                      PanningMode="HorizontalOnly">
+                            <StackPanel x:Name="panelVersionTags" Orientation="Horizontal"/>
+                        </ScrollViewer>
+                    </StackPanel>
 
-            <!-- 版本详情面板（默认隐藏） -->
-            <Grid x:Name="panelVersionDetail" Grid.Row="0" Grid.RowSpan="3" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <Button Grid.Row="0" Content="← 返回" Width="80" Height="28"
-                        HorizontalAlignment="Left" Margin="0 0 0 10"
-                        Click="BtnBack_Click" Background="#444444" Foreground="#ffffff"
-                        BorderThickness="0"/>
-
-                <Border Grid.Row="1" Background="#222222" CornerRadius="8" Padding="16" 
-                        Margin="0 0 0 10" BorderBrush="#444444" BorderThickness="1">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Image Grid.Column="0" Width="64" Height="64" Margin="0 0 16 0"
-                               Source="{Binding SelectedMod.IconUrl}"/>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="{Binding SelectedMod.Title}" FontSize="18" 
-                                       FontWeight="Bold" Foreground="#ffffff"/>
-                            <TextBlock Text="{Binding SelectedMod.Description}" 
-                                       Foreground="#cccccc" TextWrapping="Wrap" Margin="0 4 0 0"/>
-                            <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
-                                <Button Content="转到 Modrinth" Width="110" Margin="0 0 10 0"
-                                        Click="BtnOpenModrinth_Click" Background="#444444" 
-                                        Foreground="#ffffff" BorderThickness="0"/>
-                                <Button Content="复制名称" Width="90" Click="BtnCopyName_Click"
-                                        Background="#444444" Foreground="#ffffff" BorderThickness="0"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <StackPanel x:Name="panelVersionTags" Orientation="Horizontal" Margin="0 0 0 10"/>
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" CanContentScroll="False">
                         <ItemsControl x:Name="itemsVersionGroups">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Expander Header="{Binding GroupName}" IsExpanded="{Binding IsRecommended}"
-                                              Margin="0 4 0 0" Background="#1a1a1a" 
-                                              BorderBrush="#444444" BorderThickness="1"
-                                              Foreground="#ffffff">
-                                        <StackPanel Margin="12 8">
-                                            <TextBlock Text="{Binding VersionInfo}" Foreground="#aaaaaa" FontSize="12"/>
-                                            <Button Content="下载" Width="80" Height="28"
-                                                    Margin="0 8 0 0" HorizontalAlignment="Left"
-                                                    Tag="{Binding}" Click="BtnDownloadVersion_Click"
-                                                    Background="#7c4dff" Foreground="#ffffff"
-                                                    BorderThickness="0"/>
-                                        </StackPanel>
-                                    </Expander>
+                                    <Border Background="#f2f2f7" CornerRadius="16" 
+                                            Margin="0 6 0 0" Padding="16">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                                <TextBlock Text="{Binding VersionNumber}" 
+                                                           FontSize="16" FontWeight="SemiBold"
+                                                           Foreground="#333333"/>
+                                                <Border Background="#ff9500" CornerRadius="10" 
+                                                        Padding="6 2" Margin="10 0 0 0"
+                                                        Visibility="{Binding IsPreview, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="预览版" FontSize="10" 
+                                                               Foreground="#ffffff"/>
+                                                </Border>
+                                                <Border Background="#34c759" CornerRadius="10" 
+                                                        Padding="6 2" Margin="10 0 0 0"
+                                                        Visibility="{Binding IsRelease, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="正式版" FontSize="10" 
+                                                               Foreground="#ffffff"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Row="1" Text="{Binding VersionInfo}" 
+                                                       Foreground="#999999" FontSize="12"
+                                                       Margin="0 6 0 0"/>
+
+                                            <Button Grid.Row="2" Content="下载" 
+                                                    Style="{StaticResource PrimaryButton}"
+                                                    Width="100" Height="36"
+                                                    Margin="0 10 0 0" 
+                                                    HorizontalAlignment="Left"
+                                                    Tag="{Binding}" 
+                                                    Click="BtnDownloadVersion_Click"/>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
-                </ScrollViewer>
+                    </ScrollViewer>
+                </Grid>
 
-                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0 10 0 0">
-                    <ProgressBar x:Name="progressBarDownload" Width="450" Height="22" 
-                                 Margin="0 0 12 0" Background="#333333" 
-                                 Foreground="#7c4dff"/>
-                    <TextBlock x:Name="txtDownloadStatus" VerticalAlignment="Center" 
-                               Foreground="#aaaaaa"/>
-                </StackPanel>
+                <Grid x:Name="panelDownloadConfirm" Grid.Row="0" Grid.RowSpan="2" 
+                      Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Button Grid.Row="0" Content="返回" 
+                            Style="{StaticResource SecondaryButton}"
+                            HorizontalAlignment="Left" Margin="0 0 0 16"
+                            Click="BtnBackFromDownload_Click"/>
+
+                    <TextBlock Grid.Row="1" Text="确认下载" FontSize="24" 
+                               FontWeight="Bold" Foreground="#333333" Margin="0 0 16 0"/>
+
+                    <Border Grid.Row="2" Background="#f2f2f7" CornerRadius="16" 
+                            Padding="16" Margin="0 0 0 16">
+                        <StackPanel>
+                            <TextBlock Text="文件信息" FontSize="12" FontWeight="SemiBold" 
+                                       Foreground="#999999" Margin="0 0 0 8"/>
+                            <TextBlock x:Name="txtDownloadFileName" FontSize="16" 
+                                       Foreground="#333333" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="txtDownloadVersionInfo" FontSize="13" 
+                                       Foreground="#666666" Margin="0 4 0 0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="3" Background="#f2f2f7" CornerRadius="16" 
+                            Padding="16" Margin="0 0 0 16">
+                        <StackPanel>
+                            <TextBlock Text="保存位置" FontSize="12" FontWeight="SemiBold" 
+                                       Foreground="#999999" Margin="0 0 0 8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="txtDownloadPath" Width="500" 
+                                         Style="{StaticResource ModernTextBox}"
+                                         IsReadOnly="True"
+                                         Margin="0 0 10 0"/>
+                                <Button Content="浏览..." 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="BtnBrowseDownloadPath_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Grid.Row="4" Content="开始下载" 
+                            Style="{StaticResource PrimaryButton}"
+                            Height="48" Width="200"
+                            HorizontalAlignment="Left"
+                            Click="BtnStartDownload_Click"/>
+                </Grid>
+
+                <Grid x:Name="panelDownloading" Grid.Row="0" Grid.RowSpan="2" 
+                      Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="正在下载" FontSize="24" 
+                               FontWeight="Bold" Foreground="#333333" Margin="0 0 16 0"/>
+
+                    <TextBlock x:Name="txtDownloadingFile" Grid.Row="1" 
+                               FontSize="16" Foreground="#666666" Margin="0 0 12 0"/>
+
+                    <Border Grid.Row="2" Background="#e5e5ea" CornerRadius="4" Height="8" 
+                            Margin="0 0 0 8">
+                        <Grid>
+                            <Rectangle x:Name="progressBarFill" 
+                                       Fill="#007aff" 
+                                       RadiusX="4" RadiusY="4"
+                                       HorizontalAlignment="Left"
+                                       Width="0"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock x:Name="txtDownloadPercent" Grid.Row="3" 
+                               HorizontalAlignment="Right"
+                               Foreground="#999999" FontSize="12"/>
+                </Grid>
             </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </Window>
